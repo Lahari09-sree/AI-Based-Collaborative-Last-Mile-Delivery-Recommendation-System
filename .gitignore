@@ -37,6 +37,8 @@ Thumbs.db
 .mypy_cache/
 .ruff_cache/
 
+# Accidental Flutter SDK inside project
 src/flutter/flutter/
 
+# Large trained model
 models/cost_model.pkl
