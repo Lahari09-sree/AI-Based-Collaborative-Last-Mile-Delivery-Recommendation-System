@@ -190,6 +190,7 @@ AI-Based-Collaborative-Last-Mile-Delivery-Recommendation-System/
 +-- .gitignore
 +-- LICENSE
 +-- README.md
++-- requirements.txt
 ```
 
 **Note:** The large `cost_model.pkl` file is excluded from the repository because GitHub does not accept individual files larger than 100 MB. The model-generation code is included in `models/cost_model.py`.
@@ -232,22 +233,36 @@ Windows:
 python -m venv .venv
 ```
 
-### 3. Activate the environment
+### 3. Install dependencies
+
+The required Python packages are listed in `requirements.txt`.
 
 ```powershell
-.venv\Scripts\activate
+.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-### 4. Install dependencies
+> **Note:** Activating the virtual environment is optional. If PowerShell blocks `.venv\Scripts\activate`, you can directly use `.venv\Scripts\python.exe` as shown above.
+
+### 4. Generate the cost prediction model
+
+The trained `models/cost_model.pkl` file is excluded from GitHub because it is larger than GitHub's 100 MB file limit.
+
+Generate it locally using:
 
 ```powershell
-pip install pandas numpy scikit-learn matplotlib fastapi uvicorn streamlit
+.venv\Scripts\python.exe models\cost_model.py
+```
+
+This trains the Random Forest regression model and creates:
+
+```text
+models/cost_model.pkl
 ```
 
 ### 5. Start the FastAPI backend
 
 ```powershell
-python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+.venv\Scripts\python.exe -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
 ```
 
 The API will be available at:
@@ -262,6 +277,14 @@ FastAPI documentation:
 http://localhost:8000/docs
 ```
 
+Health check:
+
+```text
+http://localhost:8000/health
+```
+
+If the health check returns `healthy`, the backend and ML recommendation system are running successfully.
+
 ---
 
 ## Main API Features
@@ -275,6 +298,171 @@ The backend provides functionality for:
 * Creating delivery groups
 * Optimizing delivery routes
 * Generating delivery recommendations
+
+### API Endpoints
+
+| Endpoint                                 | Method | Purpose                                    |
+| ---------------------------------------- | ------ | ------------------------------------------ |
+| `/`                                      | GET    | API information                            |
+| `/health`                                | GET    | Backend health check                       |
+| `/orders`                                | GET    | Retrieve all delivery orders               |
+| `/orders/{order_id}`                     | GET    | Retrieve a specific order                  |
+| `/recommend/options`                     | GET    | View recommendation options                |
+| `/recommend`                             | POST   | Generate delivery recommendations          |
+| `/orders/{order_id}/recommend`           | POST   | Recommend delivery for an order            |
+| `/compatibility/{order1_id}/{order2_id}` | GET    | Check compatibility between two orders     |
+| `/collaborative`                         | GET    | Find collaborative delivery pairs          |
+| `/orders/{order_id}/collaborative`       | GET    | Find collaborative deliveries for an order |
+| `/groups`                                | GET    | Create collaborative delivery groups       |
+| `/groups/{group_id}`                     | GET    | View a delivery group                      |
+| `/groups/{group_id}/route`               | GET    | Optimize group delivery route              |
+| `/orders/{order_id}/route`               | GET    | Generate route for an order                |
+
+---
+
+## Machine Learning Model
+
+The project uses machine learning to predict delivery-related outcomes.
+
+### Cost Prediction
+
+A **Random Forest Regression** model is used to predict delivery cost.
+
+Input features include:
+
+* Delivery partner
+* Package type
+* Vehicle type
+* Delivery mode
+* Region
+* Weather condition
+* Distance
+* Package weight
+* Delivery time
+* Delivery rating
+
+The model is trained using the delivery-logistics dataset.
+
+### Delay Prediction
+
+A trained machine-learning model is used to estimate the probability of delivery delay.
+
+The predicted cost and delay probability are incorporated into the recommendation score.
+
+### Model Performance
+
+The current cost prediction model achieved approximately:
+
+```text
+MAE  : 2.32
+RMSE : 3.23
+R²   : 0.9999
+```
+
+These values are based on the current dataset and training configuration.
+
+---
+
+## Recommendation Scoring
+
+The system evaluates delivery options using multiple factors:
+
+```text
+Recommendation Score
+        |
+        +-- Predicted Delivery Cost
+        |
+        +-- Expected Delivery Time
+        |
+        +-- Delivery Rating
+        |
+        +-- Delay Probability
+```
+
+Different priorities can be selected:
+
+* **Fast** - gives more importance to delivery time.
+* **Economy** - gives more importance to delivery cost.
+* **Balanced** - considers cost, time, rating, and delay together.
+
+A lower recommendation score indicates a better delivery option.
+
+---
+
+## Collaborative Delivery Logic
+
+Two orders can be considered compatible when important constraints are satisfied.
+
+The system considers:
+
+```text
+Same Customer
+      +
+Different Delivery Platforms
+      +
+Same Location
+      +
+Compatible Delivery Window
+      +
+Acceptable Distance
+      +
+Vehicle Capacity
+      =
+Collaborative Delivery Candidate
+```
+
+The system also considers package weight and a maximum package capacity of 10 kg for collaborative delivery grouping.
+
+---
+
+## Delivery Grouping
+
+Compatible orders are combined into delivery groups.
+
+For example:
+
+```text
+Delivery Group: GROUP-001
+
+Customer: C001
+Location: Location_A
+
+Orders:
+    O101 -> Myntra
+    O102 -> Flipkart
+    O109 -> Amazon
+    O114 -> Other Partner
+
+Total Orders: 4
+Total Package Weight: 3.6 kg
+```
+
+A delivery person is assigned to the collaborative group.
+
+Example:
+
+```text
+GROUP-001
+   |
+   +-- DP-001
+```
+
+This allows multiple compatible orders to be delivered as one collaborative last-mile trip.
+
+---
+
+## Route Optimization
+
+After creating a collaborative delivery group, the system generates a delivery route.
+
+The route calculation considers the recorded delivery distance of the orders and produces a route summary containing information such as:
+
+* Total distance
+* Number of deliveries
+* Estimated delivery time
+* Average delivery speed
+
+This can be extended in future versions using real-time GPS and traffic information.
 
 ---
 
