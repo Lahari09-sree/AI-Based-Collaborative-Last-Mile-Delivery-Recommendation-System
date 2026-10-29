@@ -16,8 +16,8 @@
 **Register Number:** 23MIA1129
 
 **Other Team Members:**
-- V. Archana
-- K. Ashmit
+- V. Archana 23MIA1149
+- K. Ashmit 23MIA1145 
 
 **Faculty / Project Mentor:** Dr S Vigneshwari (54147)
 
